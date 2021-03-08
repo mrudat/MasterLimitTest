@@ -111,21 +111,19 @@ namespace MasterLimitTest
             if (newRecordsMastersCount > targetMasterCount)
             {
                 // we can't include all new records in full in patchMod, so attempt to pack as many as possible into patchMod
-                PackRecordsIntoPatch();
+                newRecordsFirst = true;
             }
 
-            newRecordsFirst = false;
+            BitArray temp = new(patchMasterCount);
+            BitArray largestMasterSet = null!;
+            BitArray smallestMasterSet = null!;
+            var smallestSets = new HashSet<BitArray>();
 
-            while(recordSets.Count > 0)
+            while (recordSets.Count > 0)
             {
-                PackRecordsIntoPatch();
-            }
-
-            void PackRecordsIntoPatch()
-            {
-                BitArray temp = new(patchMasterCount);
+                temp.SetAll(false);
                 int largestMasterSetCount = 0;
-                BitArray largestMasterSet = null!;
+                largestMasterSet = null!;
 
                 foreach (var (masterSet, data) in recordSets)
                 {
@@ -140,67 +138,86 @@ namespace MasterLimitTest
                     }
                 }
 
-                // at this point temp has a bit set for every distinct master in recordSet.
+                // at this point temp has a bit set for every distinct master in recordSets.
                 if (CountBits(temp) <= targetMasterCount)
                 {
                     var temp2 = recordSets[largestMasterSet].recordSet;
                     recordSets.Remove(largestMasterSet);
-                    foreach (var (masterSet, data) in recordSets)
-                    {
-                        temp2.UnionWith(data.recordSet);
-                    }
+                    foreach (var (masterSet, (_, _, recordSet)) in recordSets)
+                        temp2.UnionWith(recordSet);
                     recordSets.Clear();
                     patches.Add(temp2);
+                    newRecordsFirst = false;
+                    continue;
                 }
-                else
+
+                var largestMasterRecordSet = recordSets[largestMasterSet].recordSet;
+                recordSets.Remove(largestMasterSet);
+
+                int smallestAdditionalMasterSetCount = 0;
+
+                while (recordSets.Count > 0)
                 {
-                    var largestMasterRecordSet = recordSets[largestMasterSet].recordSet;
-                    recordSets.Remove(largestMasterSet);
-
-                    int smallestAdditionalMasterSetCount = 0;
-                    BitArray smallestMasterSet = null!;
-
-                    while (true)
+                    smallestAdditionalMasterSetCount = 0;
+                    smallestMasterSet = null!;
+                    smallestSets.Clear();
+                    foreach (var (masterSet, data) in recordSets)
                     {
-                        smallestAdditionalMasterSetCount = 0;
-                        smallestMasterSet = null!;
-                        foreach (var (masterSet, data) in recordSets)
+                        if (newRecordsFirst)
+                            if (!data.hasNewRecords)
+                                continue;
+
+                        // the set of distinct masterRecords that would be added to our current target if we added this recordSet to the mix.
+
+                        // temp = masterSet.Subtract(largestMasterSet);
+                        // temp = masterSet & !largestMasterSet
+                        // temp = !(!masterSet | largestMasterSet)
+                        temp.SetAll(false);
+                        temp.Or(masterSet);
+                        temp.Not();
+                        temp.Or(largestMasterSet);
+                        temp.Not();
+
+                        int additionalMasterCount = CountBits(temp);
+
+                        if (additionalMasterCount == smallestAdditionalMasterSetCount)
                         {
-                            if (newRecordsFirst)
-                                if (!data.hasNewRecords)
-                                    continue;
-
-                            // the set of distinct masterRecords that would be added to our current target if we added this recordSet to the mix.
-
-                            // should be temp = masterSet.Subtract(largestMasterSet);
-                            temp.SetAll(false);
-                            temp.Or(masterSet);
-                            temp.Not();
-                            temp.Or(largestMasterSet);
-                            temp.Not();
-
-                            int additionalMasterCount = CountBits(temp);
-
-                            if (smallestMasterSet is null || additionalMasterCount < smallestAdditionalMasterSetCount)
-                            {
-                                smallestAdditionalMasterSetCount = additionalMasterCount;
-                                smallestMasterSet = masterSet;
-                            }
+                            smallestSets.Add(masterSet);
                         }
 
-                        if (smallestMasterSet is null)
+                        if (smallestMasterSet is null || additionalMasterCount < smallestAdditionalMasterSetCount)
                         {
-                            newRecordsFirst = false;
-                            continue;
+                            smallestSets.Clear();
+                            smallestSets.Add(masterSet);
+                            smallestAdditionalMasterSetCount = additionalMasterCount;
+                            smallestMasterSet = masterSet;
                         }
+                    }
+
+                    if (smallestMasterSet is null)
+                    {
+                        newRecordsFirst = false;
+                        continue;
+                    }
+
+                    if (smallestAdditionalMasterSetCount == 0)
+                    {
+                        foreach (var masterSet in smallestSets)
+                        {
+                            var recordSet = recordSets[masterSet].recordSet;
+                            recordSets.Remove(masterSet);
+
+                            largestMasterRecordSet.UnionWith(recordSet);
+                        }
+                    }
+                    else
+                    {
+                        // TODO find the best candidate from smallestSets
 
                         int newMasterCount = largestMasterSetCount + smallestAdditionalMasterSetCount;
 
                         if (newMasterCount > targetMasterCount)
-                        {
-                            patches.Add(largestMasterRecordSet);
-                            return;
-                        }
+                            break;
 
                         largestMasterSetCount = newMasterCount;
 
@@ -208,14 +225,10 @@ namespace MasterLimitTest
                         recordSets.Remove(smallestMasterSet);
 
                         largestMasterRecordSet.UnionWith(recordSet);
-
-                        if (recordSets.Count == 0)
-                        {
-                            patches.Add(largestMasterRecordSet);
-                            return;
-                        }
                     }
                 }
+                newRecordsFirst = false;
+                patches.Add(largestMasterRecordSet);
             }
 
             // break here to investigate the results.
