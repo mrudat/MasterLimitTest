@@ -45,11 +45,10 @@ namespace MasterLimitTest
             // this would usually be 255, but we can't load a mod with 255 masters (yet).
             var targetMasterCount = patchMasterCount / 2;
 
+            // ModKey -> index into BitArray for the flag indicating that this ModKey is present.
             var masterModKeyToIndex = state.PatchMod.MasterReferences
                 .Select((x, i) => new KeyValuePair<ModKey,int>(x.Master, i))
                 .ToImmutableDictionary();
-
-            var linkCache = state.PatchMod.ToUntypedImmutableLinkCache();
 
             /// each entry is potentially an emitted mod.
             var recordSets = new Dictionary<BitArray, (int masterCount, bool hasNewRecords, HashSet<FormKey> recordSet)>();
@@ -103,6 +102,7 @@ namespace MasterLimitTest
 
             var newRecordsMastersCount = CountBits(newRecordsMasters);
 
+            // each entry in here is an emitted mod.
             var patches = new List<HashSet<FormKey>>();
 
             bool newRecordsFirst = true;
@@ -114,6 +114,8 @@ namespace MasterLimitTest
                 PackRecordsIntoPatch();
             }
 
+            newRecordsFirst = false;
+
             while(recordSets.Count > 0)
             {
                 PackRecordsIntoPatch();
@@ -121,8 +123,6 @@ namespace MasterLimitTest
 
             void PackRecordsIntoPatch()
             {
-                var recordSetsInPatch = new Dictionary<BitArray, (int masterCount, bool hasNewRecords, HashSet<FormKey> recordSet)>();
-
                 BitArray temp = new(patchMasterCount);
                 int largestMasterSetCount = 0;
                 BitArray largestMasterSet = null!;
@@ -140,9 +140,8 @@ namespace MasterLimitTest
                     }
                 }
 
-                var masterCount = CountBits(temp);
-
-                if (masterCount <= targetMasterCount)
+                // at this point temp has a bit set for every distinct master in recordSet.
+                if (CountBits(temp) <= targetMasterCount)
                 {
                     var temp2 = recordSets[largestMasterSet].recordSet;
                     recordSets.Remove(largestMasterSet);
@@ -155,7 +154,7 @@ namespace MasterLimitTest
                 }
                 else
                 {
-                    var largestMasterSetData = recordSets[largestMasterSet];
+                    var largestMasterRecordSet = recordSets[largestMasterSet].recordSet;
                     recordSets.Remove(largestMasterSet);
 
                     int smallestAdditionalMasterSetCount = 0;
@@ -171,6 +170,9 @@ namespace MasterLimitTest
                                 if (!data.hasNewRecords)
                                     continue;
 
+                            // the set of distinct masterRecords that would be added to our current target if we added this recordSet to the mix.
+
+                            // should be temp = masterSet.Subtract(largestMasterSet);
                             temp.SetAll(false);
                             temp.Or(masterSet);
                             temp.Not();
@@ -196,46 +198,64 @@ namespace MasterLimitTest
 
                         if (newMasterCount > targetMasterCount)
                         {
-                            patches.Add(largestMasterSetData.recordSet);
+                            patches.Add(largestMasterRecordSet);
                             return;
                         }
 
                         largestMasterSetCount = newMasterCount;
 
-                        var smallestMasterSetData = recordSets[smallestMasterSet];
+                        var recordSet = recordSets[smallestMasterSet].recordSet;
                         recordSets.Remove(smallestMasterSet);
 
-                        largestMasterSetData.recordSet.UnionWith(smallestMasterSetData.recordSet);
+                        largestMasterRecordSet.UnionWith(recordSet);
 
                         if (recordSets.Count == 0)
                         {
-                            patches.Add(largestMasterSetData.recordSet);
+                            patches.Add(largestMasterRecordSet);
                             return;
                         }
                     }
                 }
             }
 
+            // break here to investigate the results.
             var firstPatch = patches[0];
             patches.RemoveAt(0);
+
+            int modCount = 0;
 
             foreach (var formKeySet in patches)
             {
                 // TODO create new mod.
                 var mod = state.PatchMod;
 
+                int newCount = 0;
+                int overrideCount = 0;
+
                 foreach (var formKey in formKeySet)
                 {
                     var modKey = formKey.ModKey;
+                    // TODO add form to mod as override
+
                     if (modKey == patchModKey)
                     {
-                        // TODO add form to mod as override, clear out all formLinks in parent form.
+                        // this is an entirely new masterRecord
+
+                        // TODO clear out all formLinks patchMod
+                        newCount++;
                     }
                     else
                     {
-                        // add form to mod, remove from patchMod.
+                        // this overrides an existing masterRecord.
+
+                        // TODO remove from patchMod.
+                        overrideCount++;
                     }
                 }
+
+                Console.WriteLine($"patch_{modCount}.esl has {newCount} new records and {overrideCount} overrides");
+
+                modCount++;
             }
         }
 
