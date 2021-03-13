@@ -2,6 +2,7 @@ using MasterLimitTest;
 using Mutagen.Bethesda;
 using Mutagen.Bethesda.Oblivion;
 using Mutagen.Bethesda.Skyrim;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Xunit;
@@ -33,6 +34,7 @@ namespace MasterLimitTestTest
         internal abstract void AddToContainer(TestContainer container, TestMiscItem item);
 
         internal abstract TestContainer AddAsOverride(T mod, TestContainer container);
-        internal abstract HashSet<FormKey> AddOneOfEachRecord(T patchMod);
+
+        internal abstract HashSet<FormKey> AddOneOfEachRecord(T mod);
     }
 }

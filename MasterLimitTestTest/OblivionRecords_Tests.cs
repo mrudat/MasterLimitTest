@@ -41,57 +41,120 @@ namespace MasterLimitTestTest
         {
             HashSet<FormKey> addedRecords = new();
 
-            void addRecord<T>(Group<T> group)
-                where T : MajorRecord, IOblivionMajorRecordInternal => addedRecords.Add(group.AddNew().FormKey);
+            List<Exception> exceptions = new();
 
-            foreach (var item in Enum.GetValues<GroupTypeEnum>())
+            var modType = mod.GetType();
+
+            foreach (var property in modType.GetProperties())
             {
-                // TODO ?
-                // Profit!
+                var valueType = property.PropertyType;
+                if (!valueType.IsGenericType) continue;
+
+                var genericTypeDefinition = valueType.GetGenericTypeDefinition();
+
+                if (genericTypeDefinition == typeof(Group<>))
+                {
+                    var group = property.GetValue(mod);
+                    if (group is null) continue;
+
+                    var groupType = valueType.GetGenericArguments()[0];
+
+                    if (groupType.IsAbstract)
+                    {
+                        if (property.Name == "Globals")
+                        {
+                            var foo = new GlobalFloat(mod);
+                            mod.Globals.Add(foo);
+                            addedRecords.Add(foo.FormKey);
+                        }
+                        else if (property.Name == "GameSettings")
+                        {
+                            var foo = new GameSettingFloat(mod);
+                            mod.GameSettings.Add(foo);
+                            addedRecords.Add(foo.FormKey);
+                        }
+                        else
+                        {
+                            exceptions.Add(new NotImplementedException($"{property.Name} is a group of an abstract type"));
+                        }
+                    }
+                    else
+                    {
+                        var addNewMethod = valueType.GetMethod("AddNew", Type.EmptyTypes);
+                        if (addNewMethod is null)
+                        {
+                            exceptions.Add(new NotImplementedException($"can't find a{property.Name}.AddNew()"));
+                            continue;
+                        }
+                        object? result;
+                        try
+                        {
+                            result = addNewMethod.Invoke(group, null);
+                        }
+                        catch (Exception e)
+                        {
+                            exceptions.Add(new NotImplementedException($"{property.Name}.AddNew(); failed", e));
+                            continue;
+                        }
+                        if (result is IMajorRecordCommonGetter record)
+                        {
+                            addedRecords.Add(record.FormKey);
+                        }
+                        else
+                        {
+                            var resultType = result?.GetType().ToString() ?? "null";
+                            exceptions.Add(new NotImplementedException($"{property.Name}.AddNew(); returned an unhandled type: {resultType}"));
+                        }
+                    }
+
+                }
+                else if (genericTypeDefinition == typeof(ListGroup<>))
+                {
+                    if (property.Name == "Cells")
+                    {
+                        var cells = mod.Cells;
+
+                        CellBlock cellBlock = new()
+                        {
+                            BlockNumber = 1,
+                        };
+                        cells.Records.Add(cellBlock);
+
+                        CellSubBlock cellSubBlock = new()
+                        {
+                            BlockNumber = 1,
+                        };
+                        cellBlock.SubBlocks.Add(cellSubBlock);
+
+                        Cell cell = new(mod);
+                        cellSubBlock.Cells.Add(cell);
+                        addedRecords.Add(cell.FormKey);
+
+                        var persistentRefs = cell.Persistent;
+
+                        PlacedNpc npc = new(mod);
+                        persistentRefs.Add(npc);
+                        addedRecords.Add(npc.FormKey);
+
+                        PlacedObject obj = new(mod);
+                        persistentRefs.Add(obj);
+                        addedRecords.Add(obj.FormKey);
+                    }
+                    else
+                    {
+                        exceptions.Add(new NotImplementedException($"mod.{property.Name} is an unhandled type: {valueType} {genericTypeDefinition}"));
+                    }
+                }
+                else
+                {
+                    //exceptions.Add(new NotImplementedException($"mod.{property.Name} is an unhandled type: {valueType} {genericTypeDefinition}"));
+                }
             }
 
-            addRecord(mod.Activators);
-            addRecord(mod.AIPackages);
-            addRecord(mod.AlchemicalApparatus);
-            addRecord(mod.Ammunitions);
-            addRecord(mod.AnimatedObjects);
-            addRecord(mod.Armors);
-            addRecord(mod.Birthsigns);
-            addRecord(mod.Books);
-            addRecord(mod.Classes);
-            addRecord(mod.Climates);
-            addRecord(mod.Clothes);
-            addRecord(mod.CombatStyles);
-            addRecord(mod.Containers);
-            addRecord(mod.Creatures);
-            addRecord(mod.DialogTopics);
-            addRecord(mod.Doors);
-            addRecord(mod.EffectShaders);
-            addRecord(mod.Enchantments);
-            addRecord(mod.Eyes);
-            addRecord(mod.Factions);
-            addRecord(mod.Flora);
-            addRecord(mod.Furniture);
-            //addRecord(mod.GameSettings); // TODO
-            //addRecord(mod.Globals); // TODO
-            addRecord(mod.Grasses);
-            addRecord(mod.Hairs);
-            addRecord(mod.IdleAnimations);
-            addRecord(mod.Ingredients);
-            addRecord(mod.Keys);
-            addRecord(mod.LandTextures);
-            addRecord(mod.LeveledCreatures);
-            addRecord(mod.LeveledItems);
-            addRecord(mod.LeveledSpells);
-            addRecord(mod.Lights);
-            addRecord(mod.LoadScreens);
-            addRecord(mod.MagicEffects);
-            addRecord(mod.Miscellaneous);
-            addRecord(mod.Npcs);
-
-            // TODO
-
-            // patchMod.Cells; //TODO
+            if (exceptions.Count > 0)
+            {
+                throw new AggregateException("", exceptions);
+            }
 
             return addedRecords;
         }

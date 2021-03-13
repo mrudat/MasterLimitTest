@@ -47,22 +47,125 @@ namespace MasterLimitTestTest
         {
             return new(mod.Containers.GetOrAddAsOverride((IContainer)container.TheContainer));
         }
+
         internal override HashSet<FormKey> AddOneOfEachRecord(SkyrimMod mod)
         {
             HashSet<FormKey> addedRecords = new();
 
-            void addRecord<T>(Group<T> group)
-                where T : MajorRecord, ISkyrimMajorRecordInternal => addedRecords.Add(group.AddNew().FormKey);
+            List<Exception> exceptions = new();
 
-            foreach (var item in Enum.GetValues<GroupTypeEnum>())
+            var modType = mod.GetType();
+
+            foreach (var property in modType.GetProperties())
             {
-                // TODO ?
-                // Profit!
+                var valueType = property.PropertyType;
+                if (!valueType.IsGenericType) continue;
+
+                var genericTypeDefinition = valueType.GetGenericTypeDefinition();
+
+                if (genericTypeDefinition == typeof(Group<>))
+                {
+                    var group = property.GetValue(mod);
+                    if (group is null) continue;
+
+                    var groupType = valueType.GetGenericArguments()[0];
+
+                    if (groupType.IsAbstract)
+                    {
+                        if (property.Name == "Globals")
+                        {
+                            var foo = new GlobalFloat(mod);
+                            mod.Globals.Add(foo);
+                            addedRecords.Add(foo.FormKey);
+                        }
+                        else if(property.Name == "GameSettings")
+                        {
+                            var foo = new GameSettingBool(mod);
+                            mod.GameSettings.Add(foo);
+                            addedRecords.Add(foo.FormKey);
+                        }
+                        else
+                        {
+                            exceptions.Add(new NotImplementedException($"{property.Name} is a group of an abstract type"));
+                        }
+                    }
+                    else
+                    {
+                        var addNewMethod = valueType.GetMethod("AddNew", Type.EmptyTypes);
+                        if (addNewMethod is null)
+                        {
+                            exceptions.Add(new NotImplementedException($"can't find a{property.Name}.AddNew()"));
+                            continue;
+                        }
+                        object? result;
+                        try
+                        {
+                            result = addNewMethod.Invoke(group, null);
+                        }
+                        catch (Exception e)
+                        {
+                            exceptions.Add(new NotImplementedException($"{property.Name}.AddNew(); failed", e));
+                            continue;
+                        }
+                        if (result is IMajorRecordCommonGetter record)
+                        {
+                            addedRecords.Add(record.FormKey);
+                        }
+                        else
+                        {
+                            var resultType = result?.GetType().ToString() ?? "null";
+                            exceptions.Add(new NotImplementedException($"{property.Name}.AddNew(); returned an unhandled type: {resultType}"));
+                        }
+                    }
+
+                }
+                else if (genericTypeDefinition == typeof(ListGroup<>))
+                {
+                    if (property.Name == "Cells")
+                    {
+                        var cells = mod.Cells;
+
+                        CellBlock cellBlock = new()
+                        {
+                            BlockNumber = 1,
+                        };
+                        cells.Records.Add(cellBlock);
+
+                        CellSubBlock cellSubBlock = new()
+                        {
+                            BlockNumber = 1,
+                        };
+                        cellBlock.SubBlocks.Add(cellSubBlock);
+
+                        Cell cell = new(mod);
+                        cellSubBlock.Cells.Add(cell);
+                        addedRecords.Add(cell.FormKey);
+
+                        var persistentRefs = cell.Persistent;
+
+                        PlacedNpc npc = new(mod);
+                        persistentRefs.Add(npc);
+                        addedRecords.Add(npc.FormKey);
+
+                        PlacedObject obj = new(mod);
+                        persistentRefs.Add(obj);
+                        addedRecords.Add(obj.FormKey);
+                    }
+                    else
+                    {
+                        exceptions.Add(new NotImplementedException($"mod.{property.Name} is an unhandled type: {valueType} {genericTypeDefinition}"));
+                    }
+                }
+                else
+                {
+                    //exceptions.Add(new NotImplementedException($"mod.{property.Name} is an unhandled type: {valueType} {genericTypeDefinition}"));
+                }
             }
 
-            addRecord(mod.AcousticSpaces);
-
-            // TODO
+            if (exceptions.Count > 0)
+            {
+                throw new AggregateException("",exceptions);
+            }
 
             return addedRecords;
         }
