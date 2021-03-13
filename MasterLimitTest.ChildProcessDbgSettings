@@ -1,0 +1,5 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ChildProcessDebuggingSettings IsEnabled="false" xmlns="http://schemas.microsoft.com/vstudio/ChildProcessDebuggingSettings/2014">
+  <DefaultRule Attach="false" />
+  <Rule IsEnabled="true" ProcessName="MasterLimitTest.dll" Attach="false" />
+</ChildProcessDebuggingSettings>
