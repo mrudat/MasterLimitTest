@@ -16,13 +16,13 @@ namespace MasterLimitTestTest
         [Fact]
         public void TestAssert()
         {
-            var mod1 = NewMod("Master1.esm");
+            var mod1 = NewMod("Master1.esm", PatchMod);
             var mod1_record = NewMisc(mod1, "mod1_record");
 
-            var mod2 = NewMod("Master2.esm");
+            var mod2 = NewMod("Master2.esm", PatchMod);
             var mod2_record = NewMisc(mod2, "mod2_record");
 
-            var mod3 = NewMod("Master3.esm");
+            var mod3 = NewMod("Master3.esm", PatchMod);
             var mod3_record = NewMisc(mod3, "mod3_record");
 
             var recordWithTooManyMasters = NewContainer(PatchMod, "recordWithTooManyMasters");
@@ -57,7 +57,7 @@ namespace MasterLimitTestTest
 
             Assert.Equal(1, newRecordData?.MasterCount);
             Assert.Equal(1, newRecordData?.recordSet.Count);
-            Assert.Contains(newRecord.FormKey, newRecordData?.recordSet);
+            Assert.Contains(newRecord.FormKey, newRecordData?.recordSet.Select(x => x.FormKey));
             Assert.True(newRecordData?.hasNewRecords);
 
 
@@ -65,13 +65,13 @@ namespace MasterLimitTestTest
 
 
             Assert.Single(patches);
-            Assert.Contains(newRecord.FormKey, patches.Single());
+            Assert.Contains(newRecord.FormKey, patches.Single().Select(x => x.FormKey));
         }
 
         [Fact]
         public void SingleOverriddenRecord()
         {
-            var newMod = NewMod("newMod.esp");
+            var newMod = NewMod("newMod.esp", PatchMod);
 
             var record = NewContainer(newMod, "newRecord");
 
@@ -91,7 +91,7 @@ namespace MasterLimitTestTest
 
             Assert.Equal(1, newRecordData?.MasterCount);
             Assert.Equal(1, newRecordData?.recordSet.Count);
-            Assert.Contains(overriddenRecord.FormKey, newRecordData?.recordSet);
+            Assert.Contains(overriddenRecord.FormKey, newRecordData?.recordSet.Select(x => x.FormKey));
             Assert.False(newRecordData?.hasNewRecords);
 
 
@@ -99,7 +99,7 @@ namespace MasterLimitTestTest
 
 
             Assert.Single(patches);
-            Assert.Contains(overriddenRecord.FormKey, patches.Single());
+            Assert.Contains(overriddenRecord.FormKey, patches.Single().Select(x => x.FormKey));
         }
 
         [Fact]
@@ -122,8 +122,9 @@ namespace MasterLimitTestTest
 
             Assert.Equal(1, newRecordData?.MasterCount);
             Assert.Equal(2, newRecordData?.recordSet.Count);
-            Assert.Contains(newRecord1.FormKey, newRecordData?.recordSet);
-            Assert.Contains(newRecord2.FormKey, newRecordData?.recordSet);
+            var formKeys = newRecordData?.recordSet.Select(x => x.FormKey).ToHashSet();
+            Assert.Contains(newRecord1.FormKey, formKeys);
+            Assert.Contains(newRecord2.FormKey, formKeys);
             Assert.True(newRecordData?.hasNewRecords);
 
 
@@ -131,14 +132,15 @@ namespace MasterLimitTestTest
 
 
             Assert.Single(patches);
-            Assert.Contains(newRecord1.FormKey, patches.Single());
-            Assert.Contains(newRecord2.FormKey, patches.Single());
+            formKeys = patches.Single().Select(x => x.FormKey).ToHashSet();
+            Assert.Contains(newRecord1.FormKey, formKeys);
+            Assert.Contains(newRecord2.FormKey, formKeys);
         }
 
         [Fact]
         public void TestOneNewRecordAndOneOverride()
         {
-            var mod1 = NewMod("Master1.esm");
+            var mod1 = NewMod("Master1.esm", PatchMod);
             var mod1_record = NewContainer(mod1, "mod1_record");
 
 
@@ -159,7 +161,7 @@ namespace MasterLimitTestTest
 
             Assert.Equal(1, newRecordData?.MasterCount);
             Assert.Equal(1, newRecordData?.recordSet.Count);
-            Assert.Contains(newRecord.FormKey, newRecordData?.recordSet);
+            Assert.Contains(newRecord.FormKey, newRecordData?.recordSet.Select(x => x.FormKey));
             Assert.True(newRecordData?.hasNewRecords);
 
             temp.Clear();
@@ -169,7 +171,7 @@ namespace MasterLimitTestTest
 
             Assert.Equal(1, overrideRecordData?.MasterCount);
             Assert.Equal(1, overrideRecordData?.recordSet.Count);
-            Assert.Contains(overriddenRecord.FormKey, overrideRecordData?.recordSet);
+            Assert.Contains(overriddenRecord.FormKey, overrideRecordData?.recordSet.Select(x => x.FormKey));
             Assert.False(overrideRecordData?.hasNewRecords);
 
 
@@ -178,8 +180,9 @@ namespace MasterLimitTestTest
 
             Assert.Single(patches);
             var patch = patches.Single();
-            Assert.Contains(newRecord.FormKey, patch);
-            Assert.Contains(overriddenRecord.FormKey, patch);
+            var formKeys = patch.Select(x => x.FormKey).ToHashSet();
+            Assert.Contains(newRecord.FormKey, formKeys);
+            Assert.Contains(overriddenRecord.FormKey, formKeys);
         }
 
 
@@ -188,16 +191,16 @@ namespace MasterLimitTestTest
         {
             var MAXIMUM_MASTERS_PER_MOD = 3;
 
-            var master1 = NewMod("Master1.esm");
+            var master1 = NewMod("Master1.esm", PatchMod);
             var master1_record = NewMisc(master1, "master1_record");
 
-            var master2 = NewMod("Master2.esm");
+            var master2 = NewMod("Master2.esm", PatchMod);
             var master2_record = NewMisc(master2, "master2_record");
 
-            var master3 = NewMod("Master3.esm");
+            var master3 = NewMod("Master3.esm", PatchMod);
             var master3_record = NewMisc(master3, "master3_record");
 
-            var newMod = NewMod("newMod.esp");
+            var newMod = NewMod("newMod.esp", PatchMod);
 
             var newMod_record = NewContainer(newMod, "newRecord");
             AddToContainer(newMod_record, master2_record);
@@ -226,7 +229,7 @@ namespace MasterLimitTestTest
 
             Assert.Equal(3, newRecordData?.MasterCount);
             Assert.Equal(1, newRecordData?.recordSet.Count);
-            Assert.Contains(newRecord.FormKey, newRecordData?.recordSet);
+            Assert.Contains(newRecord.FormKey, newRecordData?.recordSet.Select(x => x.FormKey));
             Assert.True(newRecordData?.hasNewRecords);
 
             temp.Clear();
@@ -238,7 +241,7 @@ namespace MasterLimitTestTest
 
             Assert.Equal(3, overrideRecordData?.MasterCount);
             Assert.Equal(1, overrideRecordData?.recordSet.Count);
-            Assert.Contains(overriddenRecord.FormKey, overrideRecordData?.recordSet);
+            Assert.Contains(overriddenRecord.FormKey, overrideRecordData?.recordSet.Select(x => x.FormKey));
             Assert.False(overrideRecordData?.hasNewRecords);
 
 
@@ -250,7 +253,7 @@ namespace MasterLimitTestTest
             HashSet<FormKey> allRecords = new();
 
             foreach (var patch in patches)
-                allRecords.UnionWith(patch);
+                allRecords.UnionWith(patch.Select(x => x.FormKey));
 
             Assert.Contains(newRecord.FormKey, allRecords);
             Assert.Contains(overriddenRecord.FormKey, allRecords);
@@ -265,11 +268,10 @@ namespace MasterLimitTestTest
 
             var recordSets = Program.ClassifyRecordsByReferencedMasters(PatchMod, setFactory);
 
-
             HashSet<FormKey> allRecords = new();
 
             foreach (var recordSet in recordSets.Values)
-                allRecords.UnionWith(recordSet.recordSet);
+                allRecords.UnionWith(recordSet.recordSet.Select(x => x.FormKey));
 
             Assert.Equal(addedRecords, allRecords);
 
@@ -279,9 +281,12 @@ namespace MasterLimitTestTest
 
             allRecords.Clear();
             foreach (var patch in patches)
-                allRecords.UnionWith(patch);
+                allRecords.UnionWith(patch.Select(x => x.FormKey));
 
             Assert.Equal(addedRecords, allRecords);
+
+
+            List<T> results = Program.SplitPatchModIntoMultiplePatches(PatchMod, patches, NewMod);
         }
 
     }

@@ -13,9 +13,9 @@ namespace MasterLimitTest
         /// </summary>
         public const int MAXIMUM_MASTERS_PER_MOD = 255;
 
-        public static Dictionary<CustomSet<ModKey>, NewStruct1> ClassifyRecordsByReferencedMasters(IModGetter patchMod, CustomSetFactory<ModKey> setFactory, int maximumMastersPerMod = MAXIMUM_MASTERS_PER_MOD)
+        public static Dictionary<CustomSet<ModKey>, RecordsClassifiedByMasters> ClassifyRecordsByReferencedMasters(IModGetter patchMod, CustomSetFactory<ModKey> setFactory, int maximumMastersPerMod = MAXIMUM_MASTERS_PER_MOD)
         {
-            var recordSets = new Dictionary<CustomSet<ModKey>, NewStruct1>();
+            var recordSets = new Dictionary<CustomSet<ModKey>, RecordsClassifiedByMasters>();
             var masterSetBuilder = setFactory.NewSet();
 
             var patchModKey = patchMod.ModKey;
@@ -39,7 +39,7 @@ namespace MasterLimitTest
                 CustomSet<ModKey> masterSet = masterSetBuilder.ToCustomSet();
                 var recordSet = recordSets.Autovivify(masterSet, () => (masterSet, false, new()));
 
-                recordSet.recordSet.Add(formKey);
+                recordSet.recordSet.Add(record);
 
                 if (formKey.ModKey == patchModKey)
                     recordSet.hasNewRecords = true;
@@ -47,7 +47,5 @@ namespace MasterLimitTest
 
             return recordSets;
         }
-
-
     }
 }

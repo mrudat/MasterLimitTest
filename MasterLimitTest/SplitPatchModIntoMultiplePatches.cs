@@ -1,21 +1,21 @@
 ﻿using Mutagen.Bethesda;
+using Mutagen.Bethesda.Oblivion;
 using Mutagen.Bethesda.Skyrim;
-using Mutagen.Bethesda.Synthesis;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MasterLimitTest
 {
     public partial class Program
     {
-        private static void SplitPatchModIntoMultiplePatches(IPatcherState<ISkyrimMod, ISkyrimModGetter> state, List<HashSet<FormKey>> patches)
+        public static List<T> SplitPatchModIntoMultiplePatches<T>(
+            T patchMod,
+            List<HashSet<IMajorRecordCommonGetter>> patches,
+            Func<string, T, T> NewMod)
+            where T : IMod
         {
-            var patchMod = state.PatchMod;
+            List<T> mods = new();
             var patchModKey = patchMod.ModKey;
-            var linkCache = state.LinkCache;
 
             // break here to investigate the results.
             var firstPatch = patches[0];
@@ -23,23 +23,27 @@ namespace MasterLimitTest
 
             int modCount = 0;
 
+            mods.Add(patchMod);
+
             foreach (var formKeySet in patches)
             {
-                var newModKey = ModKey.FromNameAndExtension($"Synthesis_{modCount}.esp");
+                T newMod = NewMod($"Synthesis_{modCount}.esp", patchMod);
 
-                var newMod = new SkyrimMod(newModKey, patchMod.SkyrimRelease);
-                newMod.ModHeader.Flags |= SkyrimModHeader.HeaderFlag.LightMaster;
+                mods.Add(newMod);
 
                 int newCount = 0;
                 int overrideCount = 0;
 
-                foreach (var formKey in formKeySet)
+                foreach (var record in formKeySet)
                 {
-                    var modKey = formKey.ModKey;
-                    var form = linkCache.Resolve(formKey);
+                    var modKey = record.FormKey.ModKey;
+
+                    var recordType = record.GetType();
+
+
 
                     // TODO add form to mod as override
-                    // newMod.Add(form);
+                    //newMod.Add(record);
 
                     if (modKey == patchModKey)
                     {
@@ -53,7 +57,7 @@ namespace MasterLimitTest
                     {
                         // this overrides an existing form.
 
-                        patchMod.Remove(formKey);
+                        patchMod.Remove(record);
 
                         overrideCount++;
                     }
@@ -63,6 +67,8 @@ namespace MasterLimitTest
 
                 modCount++;
             }
+
+            return mods;
         }
 
     }

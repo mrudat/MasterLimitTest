@@ -5,11 +5,11 @@ namespace MasterLimitTest
 {
     public partial class Program
     {
-        public static List<HashSet<FormKey>> PatchesFromRecordSets(Dictionary<CustomSet<ModKey>, NewStruct1> recordSets, CustomSetFactory<ModKey> setFactory, int maximumMastersPerMod = MAXIMUM_MASTERS_PER_MOD)
+        public static List<HashSet<IMajorRecordCommonGetter>> PatchesFromRecordSets(Dictionary<CustomSet<ModKey>, RecordsClassifiedByMasters> recordSets, CustomSetFactory<ModKey> setFactory, int maximumMastersPerMod = MAXIMUM_MASTERS_PER_MOD)
         {
-            List<HashSet<FormKey>> patches;
+            List<HashSet<IMajorRecordCommonGetter>> patches;
             {
-                patches = new List<HashSet<FormKey>>();
+                patches = new List<HashSet<IMajorRecordCommonGetter>>();
 
                 bool newRecordsFirst = true;
 

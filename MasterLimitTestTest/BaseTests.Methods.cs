@@ -25,7 +25,7 @@ namespace MasterLimitTestTest
             setFactory = new();
         }
 
-        protected abstract T NewMod(string modName);
+        protected abstract T NewMod(string modName, T template);
 
         internal abstract TestMiscItem NewMisc(T mod, string editorID);
 

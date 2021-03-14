@@ -24,7 +24,7 @@ namespace MasterLimitTestTest
             this.release = release;
         }
 
-        protected override SkyrimMod NewMod(string modName) => new(ModKey.FromNameAndExtension(modName), release);
+        protected override SkyrimMod NewMod(string modName, SkyrimMod template) => new(ModKey.FromNameAndExtension(modName), template.SkyrimRelease);
 
         internal override TestMiscItem NewMisc(SkyrimMod mod, string editorID) => new(mod.MiscItems.AddNew(editorID));
 

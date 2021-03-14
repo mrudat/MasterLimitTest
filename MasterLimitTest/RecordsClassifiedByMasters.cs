@@ -1,13 +1,12 @@
-﻿using System;
+﻿using Mutagen.Bethesda;
+using System;
 using System.Collections.Generic;
-using Mutagen.Bethesda;
-using Mutagen.Bethesda.Skyrim;
 
 namespace MasterLimitTest
 {
     public partial class Program
     {
-        public class NewStruct1
+        public class RecordsClassifiedByMasters
         {
             /// <summary>
             /// The set of masters that these records share.
@@ -22,11 +21,11 @@ namespace MasterLimitTest
             /// <summary>
             /// the set of records that share this combination of master records
             /// </summary>
-            public readonly HashSet<FormKey> recordSet;
+            public readonly HashSet<IMajorRecordCommonGetter> recordSet;
 
             public int MasterCount { get => masterSet.Count; }
 
-            public NewStruct1(CustomSet<ModKey> masterSet, bool hasNewRecords, HashSet<FormKey> recordSet)
+            public RecordsClassifiedByMasters(CustomSet<ModKey> masterSet, bool hasNewRecords, HashSet<IMajorRecordCommonGetter> recordSet)
             {
                 this.masterSet = masterSet;
                 this.hasNewRecords = hasNewRecords;
@@ -35,10 +34,10 @@ namespace MasterLimitTest
 
             public override bool Equals(object? obj)
             {
-                return obj is NewStruct1 other &&
+                return obj is RecordsClassifiedByMasters other &&
                        MasterCount == other.MasterCount &&
                        hasNewRecords == other.hasNewRecords &&
-                       EqualityComparer<HashSet<FormKey>>.Default.Equals(recordSet, other.recordSet);
+                       EqualityComparer<HashSet<IMajorRecordCommonGetter>>.Default.Equals(recordSet, other.recordSet);
             }
 
             public override int GetHashCode()
@@ -46,21 +45,21 @@ namespace MasterLimitTest
                 return HashCode.Combine(MasterCount, hasNewRecords, recordSet);
             }
 
-            public void Deconstruct(out CustomSet<ModKey> masterSet, out bool hasNewRecords, out HashSet<FormKey> recordSet)
+            public void Deconstruct(out CustomSet<ModKey> masterSet, out bool hasNewRecords, out HashSet<IMajorRecordCommonGetter> recordSet)
             {
                 masterSet = this.masterSet;
                 hasNewRecords = this.hasNewRecords;
                 recordSet = this.recordSet;
             }
 
-            public static implicit operator (CustomSet<ModKey> masterSet, bool hasNewRecords, HashSet<FormKey> recordSet)(NewStruct1 value)
+            public static implicit operator (CustomSet<ModKey> masterSet, bool hasNewRecords, HashSet<IMajorRecordCommonGetter> recordSet)(RecordsClassifiedByMasters value)
             {
                 return (value.masterSet, value.hasNewRecords, value.recordSet);
             }
 
-            public static implicit operator NewStruct1((CustomSet<ModKey> masterSet, bool hasNewRecords, HashSet<FormKey> recordSet) value)
+            public static implicit operator RecordsClassifiedByMasters((CustomSet<ModKey> masterSet, bool hasNewRecords, HashSet<IMajorRecordCommonGetter> recordSet) value)
             {
-                return new NewStruct1(value.masterSet, value.hasNewRecords, value.recordSet);
+                return new RecordsClassifiedByMasters(value.masterSet, value.hasNewRecords, value.recordSet);
             }
         }
     }

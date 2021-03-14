@@ -16,7 +16,7 @@ namespace MasterLimitTestTest
 
         }
 
-        protected override OblivionMod NewMod(string modName) => new(ModKey.FromNameAndExtension(modName));
+        protected override OblivionMod NewMod(string modName, OblivionMod template) => new(ModKey.FromNameAndExtension(modName));
 
         internal override TestMiscItem NewMisc(OblivionMod mod, string editorID) => new(mod.Miscellaneous.AddNew(editorID));
 
