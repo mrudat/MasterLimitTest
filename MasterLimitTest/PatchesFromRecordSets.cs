@@ -5,11 +5,12 @@ namespace MasterLimitTest
 {
     public partial class Program
     {
-        public static List<HashSet<IMajorRecordCommonGetter>> PatchesFromRecordSets(Dictionary<CustomSet<ModKey>, RecordsClassifiedByMasters> recordSets, CustomSetFactory<ModKey> setFactory, int maximumMastersPerMod = MAXIMUM_MASTERS_PER_MOD)
+
+        public static List<PatchContents> PatchesFromRecordSets(Dictionary<CustomSet<ModKey>, RecordsClassifiedByMasters> recordSets, CustomSetFactory<ModKey> setFactory, int maximumMastersPerMod = MAXIMUM_MASTERS_PER_MOD)
         {
-            List<HashSet<IMajorRecordCommonGetter>> patches;
+            List<PatchContents> patches;
             {
-                patches = new List<HashSet<IMajorRecordCommonGetter>>();
+                patches = new List<PatchContents>();
 
                 bool newRecordsFirst = true;
 
@@ -50,17 +51,19 @@ namespace MasterLimitTest
                     {
                         if (temp.Count <= maximumMastersPerMod)
                         {
-                            var temp2 = recordSets[largestMasterSet].recordSet;
-                            recordSets.Remove(largestMasterSet);
-                            foreach (var (masterSet, (_, _, recordSet)) in recordSets)
-                                temp2.UnionWith(recordSet);
+                            var patchContents = new PatchContents();
+                            foreach (var (masterSet, data) in recordSets)
+                            {
+                                patchContents.records.UnionWith(data.recordSet);
+                                patchContents.contexts.UnionWith(data.contextSet);
+                            }
                             recordSets.Clear();
-                            patches.Add(temp2);
+                            patches.Add(patchContents);
                             continue;
                         }
                     }
 
-                    var largestMasterRecordSet = recordSets[largestMasterSet].recordSet;
+                    var largestMasterRecordSet = recordSets[largestMasterSet];
                     recordSets.Remove(largestMasterSet);
 
                     while (recordSets.Count > 0)
@@ -108,10 +111,11 @@ namespace MasterLimitTest
                             {
                                 foreach (var masterSet in masterSets)
                                 {
-                                    var recordSet = recordSets[masterSet].recordSet;
+                                    var recordSet = recordSets[masterSet];
                                     recordSets.Remove(masterSet);
 
-                                    largestMasterRecordSet.UnionWith(recordSet);
+                                    largestMasterRecordSet.recordSet.UnionWith(recordSet.recordSet);
+                                    largestMasterRecordSet.contextSet.UnionWith(recordSet.contextSet);
                                 }
                             }
                         }
@@ -138,15 +142,16 @@ namespace MasterLimitTest
 
                             foreach (var masterSet in victim)
                             {
-                                var recordSet = recordSets[masterSet].recordSet;
+                                var recordSet = recordSets[masterSet];
                                 recordSets.Remove(masterSet);
 
-                                largestMasterRecordSet.UnionWith(recordSet);
+                                largestMasterRecordSet.recordSet.UnionWith(recordSet.recordSet);
+                                largestMasterRecordSet.contextSet.UnionWith(recordSet.contextSet);
                             }
                         }
                     }
                     newRecordsFirst = false;
-                    patches.Add(largestMasterRecordSet);
+                    patches.Add(new PatchContents(largestMasterRecordSet));
                 }
 
             }

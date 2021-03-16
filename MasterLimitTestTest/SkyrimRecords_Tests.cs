@@ -1,4 +1,5 @@
-﻿using Mutagen.Bethesda;
+﻿using MasterLimitTest;
+using Mutagen.Bethesda;
 using Mutagen.Bethesda.Skyrim;
 using System;
 using System.Collections.Generic;
@@ -19,7 +20,7 @@ namespace MasterLimitTestTest
     {
         protected readonly SkyrimRelease release;
 
-        public SkyrimRecords_Tests(SkyrimRelease release) : base(new(patchModKey, release))
+        public SkyrimRecords_Tests(SkyrimRelease release) : base(new(patchModKey, release), Program.AddContextToMod)
         {
             this.release = release;
         }

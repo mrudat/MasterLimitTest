@@ -1,4 +1,5 @@
-﻿using Mutagen.Bethesda;
+﻿using MasterLimitTest;
+using Mutagen.Bethesda;
 using Mutagen.Bethesda.Oblivion;
 using System;
 using System.Collections.Generic;
@@ -11,7 +12,7 @@ namespace MasterLimitTestTest
     // public class ClassifyFalloutRecords_Tests : ClassifyRecordsByReferencedMasters_Tests<IFalloutMod>
     public class OblivionRecords_Tests : BaseTests<OblivionMod>
     {
-        public OblivionRecords_Tests() : base(new(patchModKey))
+        public OblivionRecords_Tests() : base(new(patchModKey), Program.AddContextToMod)
         {
 
         }

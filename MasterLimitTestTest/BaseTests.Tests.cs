@@ -65,7 +65,7 @@ namespace MasterLimitTestTest
 
 
             Assert.Single(patches);
-            Assert.Contains(newRecord.FormKey, patches.Single().Select(x => x.FormKey));
+            Assert.Contains(newRecord.FormKey, patches.Single().records.Select(x => x.FormKey));
         }
 
         [Fact]
@@ -99,7 +99,7 @@ namespace MasterLimitTestTest
 
 
             Assert.Single(patches);
-            Assert.Contains(overriddenRecord.FormKey, patches.Single().Select(x => x.FormKey));
+            Assert.Contains(overriddenRecord.FormKey, patches.Single().records.Select(x => x.FormKey));
         }
 
         [Fact]
@@ -132,7 +132,7 @@ namespace MasterLimitTestTest
 
 
             Assert.Single(patches);
-            formKeys = patches.Single().Select(x => x.FormKey).ToHashSet();
+            formKeys = patches.Single().records.Select(x => x.FormKey).ToHashSet();
             Assert.Contains(newRecord1.FormKey, formKeys);
             Assert.Contains(newRecord2.FormKey, formKeys);
         }
@@ -180,7 +180,7 @@ namespace MasterLimitTestTest
 
             Assert.Single(patches);
             var patch = patches.Single();
-            var formKeys = patch.Select(x => x.FormKey).ToHashSet();
+            var formKeys = patch.records.Select(x => x.FormKey).ToHashSet();
             Assert.Contains(newRecord.FormKey, formKeys);
             Assert.Contains(overriddenRecord.FormKey, formKeys);
         }
@@ -253,7 +253,7 @@ namespace MasterLimitTestTest
             HashSet<FormKey> allRecords = new();
 
             foreach (var patch in patches)
-                allRecords.UnionWith(patch.Select(x => x.FormKey));
+                allRecords.UnionWith(patch.records.Select(x => x.FormKey));
 
             Assert.Contains(newRecord.FormKey, allRecords);
             Assert.Contains(overriddenRecord.FormKey, allRecords);
@@ -261,7 +261,7 @@ namespace MasterLimitTestTest
 
 
         [Fact]
-        public void TestOneOfEachRecord()
+        public void TestCopyOneOfEachRecord()
         {
             HashSet<FormKey> addedRecords = AddOneOfEachRecord(PatchMod);
 
@@ -278,15 +278,26 @@ namespace MasterLimitTestTest
 
             var patches = Program.PatchesFromRecordSets(recordSets, setFactory);
 
+            // copy all records from PatchMod to new patch.
+            patches.Insert(0, new());
 
             allRecords.Clear();
             foreach (var patch in patches)
-                allRecords.UnionWith(patch.Select(x => x.FormKey));
+                allRecords.UnionWith(patch.records.Select(x => x.FormKey));
 
             Assert.Equal(addedRecords, allRecords);
 
 
-            List<T> results = Program.SplitPatchModIntoMultiplePatches(PatchMod, patches, NewMod);
+            List<T> mods = Program.SplitPatchModIntoMultiplePatches(PatchMod, patches, NewMod, addContextToMod);
+
+
+            allRecords.Clear();
+
+            foreach (var mod in mods)
+                foreach (var record in mod.EnumerateMajorRecords())
+                    allRecords.Add(record.FormKey);
+
+            Assert.Equal(addedRecords, allRecords);
         }
 
     }

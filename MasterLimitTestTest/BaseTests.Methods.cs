@@ -19,9 +19,12 @@ namespace MasterLimitTestTest
 
         protected readonly CustomSetFactory<ModKey> setFactory;
 
-        protected BaseTests(T patchMod)
+        protected readonly Action<T, IModContext<IMajorRecordCommonGetter>> addContextToMod;
+
+        protected BaseTests(T patchMod, Action<T, IModContext<IMajorRecordCommonGetter>> addContextToMod)
         {
             this.PatchMod = patchMod;
+            this.addContextToMod = addContextToMod;
             setFactory = new();
         }
 
