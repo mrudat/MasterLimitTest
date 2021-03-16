@@ -3,7 +3,6 @@ using Mutagen.Bethesda.Oblivion;
 using Mutagen.Bethesda.Skyrim;
 using Mutagen.Bethesda.Synthesis;
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace MasterLimitTest
@@ -25,7 +24,9 @@ namespace MasterLimitTest
                 });
         }
 
-        private static void RunPatch(IPatcherState<IOblivionMod, IOblivionModGetter> state)
+        private static void RunPatch<TMod, TModGetter>(IPatcherState<TMod, TModGetter> state)
+            where TMod : class, IContextMod<TMod, TModGetter>, TModGetter
+            where TModGetter : class, IContextGetterMod<TMod, TModGetter>
         {
             var setFactory = new CustomSetFactory<ModKey>();
 
@@ -39,49 +40,37 @@ namespace MasterLimitTest
             Console.WriteLine($"found {patchMasterCount} master references, attempting to produce a set of mod that each have less than {MAXIMUM_MASTERS_PER_MOD} masters.");
 
             /// each entry is potentially an emitted mod.
-            var recordSets = ClassifyRecordsByReferencedMasters(state.PatchMod, setFactory, MAXIMUM_MASTERS_PER_MOD);
+            var recordSets = ClassifyRecordsByReferencedMasters<TMod, TModGetter>(state.PatchMod, setFactory, MAXIMUM_MASTERS_PER_MOD);
 
             // each entry in here is an emitted mod.
             var patches = PatchesFromRecordSets(recordSets, setFactory, MAXIMUM_MASTERS_PER_MOD);
 
-            SplitPatchModIntoMultiplePatches(state.PatchMod, patches, NewMod);
+            // TODO surely there's got to be a better way?
+            static TMod NewMod(string name, TModGetter template)
+            {
+                return template switch
+                {
+                    SkyrimMod skyrimMod => (TMod)NewSkyrimMod(name, skyrimMod),
+                    OblivionMod oblivionMod => (TMod)NewOblivionMod(name, oblivionMod),
+                    _ => throw new NotImplementedException(),
+                };
+            }
+
+            SplitPatchModIntoMultiplePatches<TMod, TModGetter>(state.PatchMod, patches, NewMod);
 
             Environment.Exit(1);
             throw new NotImplementedException("Profit?");
         }
 
-        public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
-        {
-            var setFactory = new CustomSetFactory<ModKey>();
-
-            var patchMasterCount = state.PatchMod.MasterReferences.Count;
-
-            if (patchMasterCount <= 1) return;
-
-            // this would usually be 255, but we can't load a mod with 255 masters (yet).
-            var MAXIMUM_MASTERS_PER_MOD = patchMasterCount / 2;
-
-            Console.WriteLine($"found {patchMasterCount} master references, attempting to produce a set of mod that each have less than {MAXIMUM_MASTERS_PER_MOD} masters.");
-
-            /// each entry is potentially an emitted mod.
-            var recordSets = ClassifyRecordsByReferencedMasters(state.PatchMod, setFactory, MAXIMUM_MASTERS_PER_MOD);
-
-            // each entry in here is an emitted mod.
-            var patches = PatchesFromRecordSets(recordSets, setFactory, MAXIMUM_MASTERS_PER_MOD);
-
-            SplitPatchModIntoMultiplePatches(state.PatchMod, patches, NewMod);
-
-            Environment.Exit(1);
-            throw new NotImplementedException("Profit?");
-        }
-
-        private static SkyrimMod NewMod(string modName, ISkyrimMod template)
+        private static ISkyrimMod NewSkyrimMod(string modName, ISkyrimModGetter template)
         {
             SkyrimMod newMod = new(ModKey.FromNameAndExtension(modName), template.SkyrimRelease);
             newMod.ModHeader.Flags |= SkyrimModHeader.HeaderFlag.LightMaster;
             return newMod;
         }
 
-        private static OblivionMod NewMod(string modName, IOblivionMod template) => new(ModKey.FromNameAndExtension(modName));
+        private static IOblivionMod NewOblivionMod(string modName, IOblivionModGetter _) => new OblivionMod(ModKey.FromNameAndExtension(modName));
+
+
     }
 }

@@ -1,4 +1,5 @@
-﻿using Mutagen.Bethesda;
+﻿using MasterLimitTest;
+using Mutagen.Bethesda;
 using Mutagen.Bethesda.Skyrim;
 using System;
 using System.Collections.Generic;
@@ -15,20 +16,20 @@ namespace MasterLimitTestTest
         public SkyrimVRRecords_Tests() : base(SkyrimRelease.SkyrimVR) { }
     }
 
-    public abstract class SkyrimRecords_Tests : BaseTests<SkyrimMod>
+    public abstract class SkyrimRecords_Tests : BaseTests<ISkyrimMod, ISkyrimModGetter>
     {
         protected readonly SkyrimRelease release;
 
-        public SkyrimRecords_Tests(SkyrimRelease release) : base(new(patchModKey, release))
+        public SkyrimRecords_Tests(SkyrimRelease release) : base(new SkyrimMod(patchModKey, release))
         {
             this.release = release;
         }
 
-        protected override SkyrimMod NewMod(string modName, SkyrimMod template) => new(ModKey.FromNameAndExtension(modName), template.SkyrimRelease);
+        protected override ISkyrimMod NewMod(string modName, ISkyrimModGetter template) => new SkyrimMod(ModKey.FromNameAndExtension(modName), template.SkyrimRelease);
 
-        internal override TestMiscItem NewMisc(SkyrimMod mod, string editorID) => new(mod.MiscItems.AddNew(editorID));
+        internal override TestMiscItem NewMisc(ISkyrimMod mod, string editorID) => new(mod.MiscItems.AddNew(editorID));
 
-        internal override TestContainer NewContainer(SkyrimMod mod, string editorID) => new(mod.Containers.AddNew(editorID));
+        internal override TestContainer NewContainer(ISkyrimMod mod, string editorID) => new(mod.Containers.AddNew(editorID));
 
         internal override void AddToContainer(TestContainer container, TestMiscItem item)
         {
@@ -43,12 +44,12 @@ namespace MasterLimitTestTest
                 });
         }
 
-        internal override TestContainer AddAsOverride(SkyrimMod mod, TestContainer container)
+        internal override TestContainer AddAsOverride(ISkyrimMod mod, TestContainer container)
         {
             return new(mod.Containers.GetOrAddAsOverride((IContainer)container.TheContainer));
         }
 
-        internal override HashSet<FormKey> AddOneOfEachRecord(SkyrimMod mod)
+        internal override HashSet<FormKey> AddOneOfEachRecord(ISkyrimMod mod)
         {
             HashSet<FormKey> addedRecords = new();
 

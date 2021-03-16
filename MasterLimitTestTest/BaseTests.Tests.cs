@@ -9,8 +9,9 @@ using Xunit;
 namespace MasterLimitTestTest
 {
 
-    public abstract partial class BaseTests<T>
-        where T : IMod
+    public abstract partial class BaseTests<TMod, TModGetter>
+        where TMod : class, IContextMod<TMod, TModGetter>, TModGetter
+        where TModGetter : class, IContextGetterMod<TMod, TModGetter>
     {
 
         [Fact]
@@ -35,7 +36,7 @@ namespace MasterLimitTestTest
             var MAXIMUM_MASTERS_PER_MOD = 2;
 
 
-            Assert.Throws<RecordException>(() => Program.ClassifyRecordsByReferencedMasters(PatchMod, setFactory, MAXIMUM_MASTERS_PER_MOD));
+            Assert.Throws<RecordException>(() => Program.ClassifyRecordsByReferencedMasters<TMod, TModGetter>(PatchMod, setFactory, MAXIMUM_MASTERS_PER_MOD));
         }
 
         [Fact]
@@ -44,7 +45,7 @@ namespace MasterLimitTestTest
             var newRecord = NewContainer(PatchMod, "newRecord");
 
             
-            var recordSets = Program.ClassifyRecordsByReferencedMasters(PatchMod, setFactory);
+            var recordSets = Program.ClassifyRecordsByReferencedMasters<TMod, TModGetter>(PatchMod, setFactory);
 
 
             Assert.Single(recordSets);
@@ -56,8 +57,8 @@ namespace MasterLimitTestTest
             Assert.True(recordSets.TryGetValue(temp.ToCustomSet(), out var newRecordData));
 
             Assert.Equal(1, newRecordData?.MasterCount);
-            Assert.Equal(1, newRecordData?.recordSet.Count);
-            Assert.Contains(newRecord.FormKey, newRecordData?.recordSet.Select(x => x.FormKey));
+            Assert.Equal(1, newRecordData?.contextSet.Count);
+            Assert.Contains(newRecord.FormKey, newRecordData?.contextSet.Select(x => x.Record.FormKey));
             Assert.True(newRecordData?.hasNewRecords);
 
 
@@ -65,7 +66,7 @@ namespace MasterLimitTestTest
 
 
             Assert.Single(patches);
-            Assert.Contains(newRecord.FormKey, patches.Single().Select(x => x.FormKey));
+            Assert.Contains(newRecord.FormKey, patches.Single().Select(x => x.Record.FormKey));
         }
 
         [Fact]
@@ -78,7 +79,7 @@ namespace MasterLimitTestTest
             var overriddenRecord = AddAsOverride(PatchMod, record);
 
 
-            var recordSets = Program.ClassifyRecordsByReferencedMasters(PatchMod, setFactory);
+            var recordSets = Program.ClassifyRecordsByReferencedMasters<TMod, TModGetter>(PatchMod, setFactory);
 
 
             Assert.Single(recordSets);
@@ -90,8 +91,8 @@ namespace MasterLimitTestTest
             Assert.True(recordSets.TryGetValue(temp.ToCustomSet(), out var newRecordData));
 
             Assert.Equal(1, newRecordData?.MasterCount);
-            Assert.Equal(1, newRecordData?.recordSet.Count);
-            Assert.Contains(overriddenRecord.FormKey, newRecordData?.recordSet.Select(x => x.FormKey));
+            Assert.Equal(1, newRecordData?.contextSet.Count);
+            Assert.Contains(overriddenRecord.FormKey, newRecordData?.contextSet.Select(x => x.Record.FormKey));
             Assert.False(newRecordData?.hasNewRecords);
 
 
@@ -99,7 +100,7 @@ namespace MasterLimitTestTest
 
 
             Assert.Single(patches);
-            Assert.Contains(overriddenRecord.FormKey, patches.Single().Select(x => x.FormKey));
+            Assert.Contains(overriddenRecord.FormKey, patches.Single().Select(x => x.Record.FormKey));
         }
 
         [Fact]
@@ -109,7 +110,7 @@ namespace MasterLimitTestTest
             var newRecord2 = NewContainer(PatchMod, "another_record");
 
 
-            var recordSets = Program.ClassifyRecordsByReferencedMasters(PatchMod, setFactory);
+            var recordSets = Program.ClassifyRecordsByReferencedMasters<TMod, TModGetter>(PatchMod, setFactory);
 
 
             Assert.Single(recordSets);
@@ -121,8 +122,8 @@ namespace MasterLimitTestTest
             Assert.True(recordSets.TryGetValue(temp.ToCustomSet(), out var newRecordData));
 
             Assert.Equal(1, newRecordData?.MasterCount);
-            Assert.Equal(2, newRecordData?.recordSet.Count);
-            var formKeys = newRecordData?.recordSet.Select(x => x.FormKey).ToHashSet();
+            Assert.Equal(2, newRecordData?.contextSet.Count);
+            var formKeys = newRecordData?.contextSet.Select(x => x.Record.FormKey).ToHashSet();
             Assert.Contains(newRecord1.FormKey, formKeys);
             Assert.Contains(newRecord2.FormKey, formKeys);
             Assert.True(newRecordData?.hasNewRecords);
@@ -132,7 +133,7 @@ namespace MasterLimitTestTest
 
 
             Assert.Single(patches);
-            formKeys = patches.Single().Select(x => x.FormKey).ToHashSet();
+            formKeys = patches.Single().Select(x => x.Record.FormKey).ToHashSet();
             Assert.Contains(newRecord1.FormKey, formKeys);
             Assert.Contains(newRecord2.FormKey, formKeys);
         }
@@ -148,7 +149,7 @@ namespace MasterLimitTestTest
             var overriddenRecord = AddAsOverride(PatchMod, mod1_record);
 
 
-            var recordSets = Program.ClassifyRecordsByReferencedMasters(PatchMod, setFactory);
+            var recordSets = Program.ClassifyRecordsByReferencedMasters<TMod, TModGetter>(PatchMod, setFactory);
 
 
             Assert.Equal(2, recordSets.Count);
@@ -160,8 +161,8 @@ namespace MasterLimitTestTest
             Assert.True(recordSets.TryGetValue(temp.ToCustomSet(), out var newRecordData));
 
             Assert.Equal(1, newRecordData?.MasterCount);
-            Assert.Equal(1, newRecordData?.recordSet.Count);
-            Assert.Contains(newRecord.FormKey, newRecordData?.recordSet.Select(x => x.FormKey));
+            Assert.Equal(1, newRecordData?.contextSet.Count);
+            Assert.Contains(newRecord.FormKey, newRecordData?.contextSet.Select(x => x.Record.FormKey));
             Assert.True(newRecordData?.hasNewRecords);
 
             temp.Clear();
@@ -170,8 +171,8 @@ namespace MasterLimitTestTest
             Assert.True(recordSets.TryGetValue(temp.ToCustomSet(), out var overrideRecordData));
 
             Assert.Equal(1, overrideRecordData?.MasterCount);
-            Assert.Equal(1, overrideRecordData?.recordSet.Count);
-            Assert.Contains(overriddenRecord.FormKey, overrideRecordData?.recordSet.Select(x => x.FormKey));
+            Assert.Equal(1, overrideRecordData?.contextSet.Count);
+            Assert.Contains(overriddenRecord.FormKey, overrideRecordData?.contextSet.Select(x => x.Record.FormKey));
             Assert.False(overrideRecordData?.hasNewRecords);
 
 
@@ -180,7 +181,7 @@ namespace MasterLimitTestTest
 
             Assert.Single(patches);
             var patch = patches.Single();
-            var formKeys = patch.Select(x => x.FormKey).ToHashSet();
+            var formKeys = patch.Select(x => x.Record.FormKey).ToHashSet();
             Assert.Contains(newRecord.FormKey, formKeys);
             Assert.Contains(overriddenRecord.FormKey, formKeys);
         }
@@ -214,7 +215,7 @@ namespace MasterLimitTestTest
             AddToContainer(overriddenRecord, master3_record);
 
 
-            var recordSets = Program.ClassifyRecordsByReferencedMasters(PatchMod, setFactory, MAXIMUM_MASTERS_PER_MOD);
+            var recordSets = Program.ClassifyRecordsByReferencedMasters<TMod, TModGetter>(PatchMod, setFactory, MAXIMUM_MASTERS_PER_MOD);
 
 
             Assert.Equal(2, recordSets.Count);
@@ -228,8 +229,8 @@ namespace MasterLimitTestTest
             Assert.True(recordSets.TryGetValue(temp.ToCustomSet(), out var newRecordData));
 
             Assert.Equal(3, newRecordData?.MasterCount);
-            Assert.Equal(1, newRecordData?.recordSet.Count);
-            Assert.Contains(newRecord.FormKey, newRecordData?.recordSet.Select(x => x.FormKey));
+            Assert.Equal(1, newRecordData?.contextSet.Count);
+            Assert.Contains(newRecord.FormKey, newRecordData?.contextSet.Select(x => x.Record.FormKey));
             Assert.True(newRecordData?.hasNewRecords);
 
             temp.Clear();
@@ -240,8 +241,8 @@ namespace MasterLimitTestTest
             Assert.True(recordSets.TryGetValue(temp.ToCustomSet(), out var overrideRecordData));
 
             Assert.Equal(3, overrideRecordData?.MasterCount);
-            Assert.Equal(1, overrideRecordData?.recordSet.Count);
-            Assert.Contains(overriddenRecord.FormKey, overrideRecordData?.recordSet.Select(x => x.FormKey));
+            Assert.Equal(1, overrideRecordData?.contextSet.Count);
+            Assert.Contains(overriddenRecord.FormKey, overrideRecordData?.contextSet.Select(x => x.Record.FormKey));
             Assert.False(overrideRecordData?.hasNewRecords);
 
 
@@ -253,7 +254,7 @@ namespace MasterLimitTestTest
             HashSet<FormKey> allRecords = new();
 
             foreach (var patch in patches)
-                allRecords.UnionWith(patch.Select(x => x.FormKey));
+                allRecords.UnionWith(patch.Select(x => x.Record.FormKey));
 
             Assert.Contains(newRecord.FormKey, allRecords);
             Assert.Contains(overriddenRecord.FormKey, allRecords);
@@ -261,33 +262,50 @@ namespace MasterLimitTestTest
 
 
         [Fact]
-        public void TestOneOfEachRecord()
+        public void TestCopyOneOfEachRecord()
         {
-            HashSet<FormKey> addedRecords = AddOneOfEachRecord(PatchMod);
+            var addedRecords = AddOneOfEachRecord(PatchMod);
+
+            var linkCache = PatchMod.ToUntypedImmutableLinkCache();
+
+            var addedContextRecords = PatchMod.EnumerateMajorRecordContexts<IMajorRecordCommon, IMajorRecordCommonGetter>(linkCache, false).Select(x => x.Record.FormKey).ToHashSet();
 
 
-            var recordSets = Program.ClassifyRecordsByReferencedMasters(PatchMod, setFactory);
+            var recordSets = Program.ClassifyRecordsByReferencedMasters<TMod, TModGetter>(PatchMod, setFactory);
+
 
             HashSet<FormKey> allRecords = new();
-
             foreach (var recordSet in recordSets.Values)
-                allRecords.UnionWith(recordSet.recordSet.Select(x => x.FormKey));
+                allRecords.UnionWith(recordSet.contextSet.Select(x => x.Record.FormKey));
 
-            Assert.Equal(addedRecords, allRecords);
+            Assert.Equal(addedContextRecords.Count, allRecords.Count);
+            Assert.Equal(addedContextRecords, allRecords);
 
 
             var patches = Program.PatchesFromRecordSets(recordSets, setFactory);
 
+            // copy all records from PatchMod to new patch.
+            patches.Insert(0, new());
 
             allRecords.Clear();
             foreach (var patch in patches)
-                allRecords.UnionWith(patch.Select(x => x.FormKey));
+                allRecords.UnionWith(patch.Select(x => x.Record.FormKey));
 
+            Assert.Equal(addedContextRecords.Count, allRecords.Count);
+            Assert.Equal(addedContextRecords, allRecords);
+
+
+            List<TMod> mods = Program.SplitPatchModIntoMultiplePatches(PatchMod, patches, NewMod);
+
+
+            allRecords.Clear();
+
+            foreach (var mod in mods)
+                foreach (var record in mod.EnumerateMajorRecords())
+                    allRecords.Add(record.FormKey);
+
+            Assert.Equal(addedRecords.Count, allRecords.Count);
             Assert.Equal(addedRecords, allRecords);
-
-
-            List<T> results = Program.SplitPatchModIntoMultiplePatches(PatchMod, patches, NewMod);
         }
-
     }
 }

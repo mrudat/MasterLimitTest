@@ -1,4 +1,5 @@
-﻿using Mutagen.Bethesda;
+﻿using MasterLimitTest;
+using Mutagen.Bethesda;
 using Mutagen.Bethesda.Oblivion;
 using System;
 using System.Collections.Generic;
@@ -9,18 +10,18 @@ namespace MasterLimitTestTest
     /// This is pointless, but in lieu of Fallout4 support...
     /// </summary>
     // public class ClassifyFalloutRecords_Tests : ClassifyRecordsByReferencedMasters_Tests<IFalloutMod>
-    public class OblivionRecords_Tests : BaseTests<OblivionMod>
+    public class OblivionRecords_Tests : BaseTests<IOblivionMod, IOblivionModGetter>
     {
-        public OblivionRecords_Tests() : base(new(patchModKey))
+        public OblivionRecords_Tests() : base(new OblivionMod(patchModKey))
         {
 
         }
 
-        protected override OblivionMod NewMod(string modName, OblivionMod template) => new(ModKey.FromNameAndExtension(modName));
+        protected override IOblivionMod NewMod(string modName, IOblivionModGetter template) => new OblivionMod(ModKey.FromNameAndExtension(modName));
 
-        internal override TestMiscItem NewMisc(OblivionMod mod, string editorID) => new(mod.Miscellaneous.AddNew(editorID));
+        internal override TestMiscItem NewMisc(IOblivionMod mod, string editorID) => new(mod.Miscellaneous.AddNew(editorID));
 
-        internal override TestContainer NewContainer(OblivionMod mod, string editorID) => new(mod.Containers.AddNew(editorID));
+        internal override TestContainer NewContainer(IOblivionMod mod, string editorID) => new(mod.Containers.AddNew(editorID));
 
         internal override void AddToContainer(TestContainer container, TestMiscItem item)
         {
@@ -32,12 +33,12 @@ namespace MasterLimitTestTest
                 });
         }
 
-        internal override TestContainer AddAsOverride(OblivionMod mod, TestContainer container)
+        internal override TestContainer AddAsOverride(IOblivionMod mod, TestContainer container)
         {
             return new(mod.Containers.GetOrAddAsOverride((IContainer)container.TheContainer));
         }
 
-        internal override HashSet<FormKey> AddOneOfEachRecord(OblivionMod mod)
+        internal override HashSet<FormKey> AddOneOfEachRecord(IOblivionMod mod)
         {
             HashSet<FormKey> addedRecords = new();
 
@@ -158,5 +159,6 @@ namespace MasterLimitTestTest
 
             return addedRecords;
         }
+
     }
 }

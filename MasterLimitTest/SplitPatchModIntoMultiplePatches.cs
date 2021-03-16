@@ -3,18 +3,20 @@ using Mutagen.Bethesda.Oblivion;
 using Mutagen.Bethesda.Skyrim;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace MasterLimitTest
 {
     public partial class Program
     {
-        public static List<T> SplitPatchModIntoMultiplePatches<T>(
-            T patchMod,
-            List<HashSet<IMajorRecordCommonGetter>> patches,
-            Func<string, T, T> NewMod)
-            where T : IMod
+        public static List<TMod> SplitPatchModIntoMultiplePatches<TMod,TModGetter>(
+            TMod patchMod,
+            List<HashSet<IModContext<TMod, TModGetter, IMajorRecordCommon, IMajorRecordCommonGetter>>> patches,
+            Func<string, TModGetter, TMod> NewMod)
+            where TMod : class, IMod, TModGetter
+            where TModGetter : class, IModGetter
         {
-            List<T> mods = new();
+            List<TMod> mods = new();
             var patchModKey = patchMod.ModKey;
 
             // break here to investigate the results.
@@ -25,31 +27,27 @@ namespace MasterLimitTest
 
             mods.Add(patchMod);
 
-            foreach (var formKeySet in patches)
+            foreach (var patchContents in patches)
             {
-                T newMod = NewMod($"Synthesis_{modCount}.esp", patchMod);
+                TMod newMod = NewMod($"Synthesis_{modCount}.esp", patchMod);
 
                 mods.Add(newMod);
 
                 int newCount = 0;
                 int overrideCount = 0;
 
-                foreach (var record in formKeySet)
+                foreach (var context in patchContents)
                 {
-                    var modKey = record.FormKey.ModKey;
+                    var modKey = context.ModKey;
 
-                    var recordType = record.GetType();
-
-
-
-                    // TODO add form to mod as override
-                    //newMod.Add(record);
+                    context.GetOrAddAsOverride(newMod);
+                    patchMod.Remove(context.Record);
 
                     if (modKey == patchModKey)
                     {
                         // this is an entirely new form
 
-                        // TODO clear out all formLinks patchMod
+                        // .. ?
 
                         newCount++;
                     }
@@ -57,7 +55,7 @@ namespace MasterLimitTest
                     {
                         // this overrides an existing form.
 
-                        patchMod.Remove(record);
+                        // .. ?
 
                         overrideCount++;
                     }
@@ -72,4 +70,5 @@ namespace MasterLimitTest
         }
 
     }
+
 }
